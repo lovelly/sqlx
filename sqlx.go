@@ -5,12 +5,12 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jmoiron/sqlx/reflectx"
 )
@@ -350,11 +350,17 @@ func (db *DB) Beginx() (*Tx, error) {
 // Queryx queries the database and returns an *sqlx.Rows.
 // Any placeholder parameters are replaced with supplied args.
 func (db *DB) Queryx(query string, args ...interface{}) (*Rows, error) {
+	defer Print(time.Now(), query, args)
 	r, err := db.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 	return &Rows{Rows: r, unsafe: db.unsafe, Mapper: db.Mapper}, err
+}
+
+func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
+	defer Print(time.Now(), query, args)
+	return db.DB.Exec(query, args...)
 }
 
 // QueryRowx queries the database and returns an *sqlx.Row.
@@ -545,10 +551,12 @@ func (s *Stmt) Queryx(args ...interface{}) (*Rows, error) {
 type qStmt struct{ *Stmt }
 
 func (q *qStmt) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	defer Print(time.Now(), query, args)
 	return q.Stmt.Query(args...)
 }
 
 func (q *qStmt) Queryx(query string, args ...interface{}) (*Rows, error) {
+	defer Print(time.Now(), query, args)
 	r, err := q.Stmt.Query(args...)
 	if err != nil {
 		return nil, err
@@ -562,6 +570,7 @@ func (q *qStmt) QueryRowx(query string, args ...interface{}) *Row {
 }
 
 func (q *qStmt) Exec(query string, args ...interface{}) (sql.Result, error) {
+	defer Print(time.Now(), query, args)
 	return q.Stmt.Exec(args...)
 }
 
